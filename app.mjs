@@ -8,7 +8,10 @@ app.use(express.json());
 
 // router
 app.use("/questions",questionRouter)
-app.use("/comments", answerRouter)
+app.use("/answers",answerRouter)
+
+
+
 
 app.get("/test", (req, res) => {
   return res.json("Server API is working 🚀");
