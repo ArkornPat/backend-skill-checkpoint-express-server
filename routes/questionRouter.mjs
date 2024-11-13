@@ -1,10 +1,11 @@
 import { Router } from "express";
 import connectionPool from "../utils/db.mjs";
+import validateDataQuestion from "../middleware/validationDataQuestion.mjs";
 
 const questionRouter = Router();
 
 //post question
-questionRouter.post("/", async (req, res) => {
+questionRouter.post("/", [validateDataQuestion], async (req, res) => {
   const newQuestion = req.body;
   try {
     const query = `insert into questions ( title, description, category) values($1, $2, $3)`;
@@ -63,6 +64,9 @@ questionRouter.get("/:questionId", async (req, res) => {
       `select questions.id, questions.title, questions.description, questions.category from questions where id=$1`,
       [questionId]
     );
+    if (!results.rows[0]) {
+      return res.status(404).json({ message: "Question not found." });
+    }
     return res.status(200).json(results.rows[0]);
   } catch {
     return res.status(500).json({
@@ -86,7 +90,7 @@ questionRouter.get("/", async (req, res) => {
 });
 
 //update question
-questionRouter.put("/:questionId", async (req, res) => {
+questionRouter.put("/:questionId", [validateDataQuestion], async (req, res) => {
   const questionId = req.params.questionId;
   const newQuestion = req.body;
   try {
@@ -98,15 +102,15 @@ questionRouter.put("/:questionId", async (req, res) => {
       newQuestion.category,
     ];
 
-    await connectionPool.query(query, values);
-    const results = await connectionPool.query(
-      `select questions.id, questions.title, questions.description, questions.category from questions where id=$1`,
-      [questionId]
-    );
+    const results = await connectionPool.query(query, values);
+
+    if(!results.rows[0]){
+        return res.status(404).json({"message": "Question not found."})
+    }
+
 
     return res.status(200).json({
-      message: "Updated question sucessfully",
-      newdata: results.rows[0],
+      message: "Updated question sucessfully"
     });
   } catch {
     return res.status(500).json({
@@ -121,7 +125,10 @@ questionRouter.delete("/:questionId", async (req, res) => {
   try {
     const query = `delete from questions where id = $1`;
     const values = [questionId];
-    await connectionPool.query(query, values);
+    const results = await connectionPool.query(query, values);
+    if(!results.rows[0]){
+        return res.status(404).json({"message": "Question not found."})
+    }
     return res
       .status(200)
       .json({ message: `Deleted question id = ${questionId} sucessfully` });
@@ -136,7 +143,18 @@ questionRouter.delete("/:questionId", async (req, res) => {
 questionRouter.post("/:questionId/answer", async (req, res) => {
   const questionId = req.params.questionId;
   const newAnswer = req.body;
+  if(!newAnswer.content){
+    return res.status(400).json({"message": "Invalid request data."})
+  }
+  if(newAnswer.content.length > 300){
+    return res.status(400).json({"message": "Answer content exceeds the maximum allowed length of 300 characters."})
+  }
+
   try {
+    const results = await connectionPool.query(`select questions.id from questions where id =$1`, [questionId])
+    if(!results.rows[0]){
+        return res.status(404).json({"message": "Question not found."})
+    }
     await connectionPool.query(
       `insert into answers (question_id, content) values ($1,$2)`,
       [questionId, newAnswer.content]
@@ -154,6 +172,11 @@ questionRouter.post("/:questionId/answer", async (req, res) => {
 questionRouter.get("/:questionId/answer", async (req, res) => {
   const questionId = req.params.questionId;
   try {
+    const result = await connectionPool.query(`select questions.id from questions where id =$1`, [questionId])
+    if(!result.rows[0]){
+        return res.status(404).json({"message": "Question not found."})
+    }
+
     const results = await connectionPool.query(
       `select question_id, content from answers where question_id = $1`,
       [questionId]
@@ -170,6 +193,10 @@ questionRouter.get("/:questionId/answer", async (req, res) => {
 questionRouter.delete("/:questionId/answer", async (req, res) => {
   const questionId = req.params.questionId;
   try {
+    const results = await connectionPool.query(`select questions.id from questions where id =$1`, [questionId])
+    if(!results.rows[0]){
+        return res.status(404).json({"message": "Question not found."})
+    }
     await connectionPool.query(`delete from answers where question_id = $1`, [
       questionId,
     ]);
@@ -187,7 +214,14 @@ questionRouter.delete("/:questionId/answer", async (req, res) => {
 questionRouter.post("/:questionId/vote", async (req, res) => {
   const questionId = req.params.questionId;
   const newVote = req.body;
+  if(!newVote.vote){
+    return res.status(400).json({"message": "Invalid vote value."})
+  }
   try {
+    const results = await connectionPool.query(`select questions.id from questions where id =$1`, [questionId])
+    if(!results.rows[0]){
+        return res.status(404).json({"message": "Question not found."})
+    }
     const query = `insert into question_votes (question_id , vote) values($1, $2)`;
     const values = [questionId, newVote.vote];
     await connectionPool.query(query, values);

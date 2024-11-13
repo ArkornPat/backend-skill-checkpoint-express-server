@@ -7,6 +7,9 @@ const answerRouter = Router();
 answerRouter.post("/:answerId/vote", async (req, res) => {
     const answerId = req.params.answerId;
     const newVote = req.body;
+    if(!newVote.vote){
+        return res.status(400).json({"message": "Invalid vote value."})
+      }
     try {
       const query = `insert into answer_votes (answer_id , vote) values($1, $2)`;
       const values = [answerId, newVote.vote];
