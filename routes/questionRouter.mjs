@@ -7,15 +7,15 @@ const questionRouter = Router();
 questionRouter.post("/", async (req, res) => {
   const newQuestion = req.body;
   try {
-    const query = `insert into questions ( title, description, category) values($1, $2, $3)`;
+    const query = `insert into questions ( title, description, category) values($1, $2, $3) returning id`;
     const values = [
       newQuestion.title,
       newQuestion.description,
       newQuestion.category,
     ];
-    await connectionPool.query(query, values);
+    const results = await connectionPool.query(query, values);
     return res.status(201).json({
-      message: `Question has been created successfully`,
+      message: `Question id = ${results.rows[0].id} has been created successfully`,
     });
   } catch (e) {
     console.log(e);
