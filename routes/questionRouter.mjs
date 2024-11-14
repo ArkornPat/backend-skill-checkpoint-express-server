@@ -104,13 +104,12 @@ questionRouter.put("/:questionId", [validateDataQuestion], async (req, res) => {
 
     const results = await connectionPool.query(query, values);
 
-    if(!results.rows[0]){
-        return res.status(404).json({"message": "Question not found."})
+    if (!results.rows[0]) {
+      return res.status(404).json({ message: "Question not found." });
     }
 
-
     return res.status(200).json({
-      message: "Updated question sucessfully"
+      message: "Updated question sucessfully",
     });
   } catch {
     return res.status(500).json({
@@ -126,8 +125,8 @@ questionRouter.delete("/:questionId", async (req, res) => {
     const query = `delete from questions where id = $1`;
     const values = [questionId];
     const results = await connectionPool.query(query, values);
-    if(!results.rows[0]){
-        return res.status(404).json({"message": "Question not found."})
+    if (!results.rows[0]) {
+      return res.status(404).json({ message: "Question not found." });
     }
     return res
       .status(200)
@@ -143,17 +142,23 @@ questionRouter.delete("/:questionId", async (req, res) => {
 questionRouter.post("/:questionId/answer", async (req, res) => {
   const questionId = req.params.questionId;
   const newAnswer = req.body;
-  if(!newAnswer.content){
-    return res.status(400).json({"message": "Invalid request data."})
+  if (!newAnswer.content) {
+    return res.status(400).json({ message: "Invalid request data." });
   }
-  if(newAnswer.content.length > 300){
-    return res.status(400).json({"message": "Answer content exceeds the maximum allowed length of 300 characters."})
+  if (newAnswer.content.length > 300) {
+    return res.status(400).json({
+      message:
+        "Answer content exceeds the maximum allowed length of 300 characters.",
+    });
   }
 
   try {
-    const results = await connectionPool.query(`select questions.id from questions where id =$1`, [questionId])
-    if(!results.rows[0]){
-        return res.status(404).json({"message": "Question not found."})
+    const results = await connectionPool.query(
+      `select questions.id from questions where id =$1`,
+      [questionId]
+    );
+    if (!results.rows[0]) {
+      return res.status(404).json({ message: "Question not found." });
     }
     await connectionPool.query(
       `insert into answers (question_id, content) values ($1,$2)`,
@@ -172,9 +177,12 @@ questionRouter.post("/:questionId/answer", async (req, res) => {
 questionRouter.get("/:questionId/answer", async (req, res) => {
   const questionId = req.params.questionId;
   try {
-    const result = await connectionPool.query(`select questions.id from questions where id =$1`, [questionId])
-    if(!result.rows[0]){
-        return res.status(404).json({"message": "Question not found."})
+    const result = await connectionPool.query(
+      `select questions.id from questions where id =$1`,
+      [questionId]
+    );
+    if (!result.rows[0]) {
+      return res.status(404).json({ message: "Question not found." });
     }
 
     const results = await connectionPool.query(
@@ -193,9 +201,12 @@ questionRouter.get("/:questionId/answer", async (req, res) => {
 questionRouter.delete("/:questionId/answer", async (req, res) => {
   const questionId = req.params.questionId;
   try {
-    const results = await connectionPool.query(`select questions.id from questions where id =$1`, [questionId])
-    if(!results.rows[0]){
-        return res.status(404).json({"message": "Question not found."})
+    const results = await connectionPool.query(
+      `select questions.id from questions where id =$1`,
+      [questionId]
+    );
+    if (!results.rows[0]) {
+      return res.status(404).json({ message: "Question not found." });
     }
     await connectionPool.query(`delete from answers where question_id = $1`, [
       questionId,
@@ -214,13 +225,20 @@ questionRouter.delete("/:questionId/answer", async (req, res) => {
 questionRouter.post("/:questionId/vote", async (req, res) => {
   const questionId = req.params.questionId;
   const newVote = req.body;
-  if(!newVote.vote){
-    return res.status(400).json({"message": "Invalid vote value."})
+  if (!newVote.vote) {
+    return res.status(400).json({ message: "Invalid vote value." });
   }
+  if (newVote.vote !== 1 && newVote.vote !== -1) {
+    return res.status(400).json({ message: "Invalid vote value." });
+  }
+
   try {
-    const results = await connectionPool.query(`select questions.id from questions where id =$1`, [questionId])
-    if(!results.rows[0]){
-        return res.status(404).json({"message": "Question not found."})
+    const results = await connectionPool.query(
+      `select questions.id from questions where id =$1`,
+      [questionId]
+    );
+    if (!results.rows[0]) {
+      return res.status(404).json({ message: "Question not found." });
     }
     const query = `insert into question_votes (question_id , vote) values($1, $2)`;
     const values = [questionId, newVote.vote];
@@ -234,5 +252,269 @@ questionRouter.post("/:questionId/vote", async (req, res) => {
     });
   }
 });
+
+/**
+ * @swagger
+ * tags:
+ *   name: Questions
+ *   description: API for endpoint questions
+ */
+
+/**
+ * @swagger
+ * /questions:
+ *   post:
+ *     summary: Create a new question
+ *     tags: [Questions]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               title:
+ *                 type: string
+ *               description:
+ *                 type: string
+ *               category:
+ *                 type: string
+ *     responses:
+ *       201:
+ *         description: Question created successfully.
+ *       500:
+ *         description: Server error due to database connection issue.
+ */
+//questionRouter.post("/", [validateDataQuestion], async (req, res) => { /*...*/ });
+
+/**
+ * @swagger
+ * /questions/search:
+ *   get:
+ *     summary: Search questions by category and keyword
+ *     tags: [Questions]
+ *     parameters:
+ *       - in: query
+ *         name: category
+ *         schema:
+ *           type: string
+ *         description: Category to filter questions by
+ *       - in: query
+ *         name: keyword
+ *         schema:
+ *           type: string
+ *         description: Keyword to search in title or description
+ *     responses:
+ *       200:
+ *         description: List of questions matching the search criteria
+ *       500:
+ *         description: Server error due to database connection issue.
+ */
+//questionRouter.get("/search", async (req, res) => { /*...*/ });
+
+/**
+ * @swagger
+ * /questions/{questionId}:
+ *   get:
+ *     summary: Get a question by its ID
+ *     tags: [Questions]
+ *     parameters:
+ *       - in: path
+ *         name: questionId
+ *         required: true
+ *         schema:
+ *           type: integer
+ *     responses:
+ *       200:
+ *         description: A single question
+ *       404:
+ *         description: Question not found
+ *       500:
+ *         description: Server error due to database connection issue.
+ */
+//questionRouter.get("/:questionId", async (req, res) => { /*...*/ });
+
+/**
+ * @swagger
+ * /questions:
+ *   get:
+ *     summary: Get all questions
+ *     tags: [Questions]
+ *     responses:
+ *       200:
+ *         description: A list of all questions
+ *       500:
+ *         description: Server error due to database connection issue.
+ */
+//questionRouter.get("/", async (req, res) => { /*...*/ });
+
+/**
+ * @swagger
+ * /questions/{questionId}:
+ *   put:
+ *     summary: Update a question by ID
+ *     tags: [Questions]
+ *     parameters:
+ *       - in: path
+ *         name: questionId
+ *         required: true
+ *         schema:
+ *           type: integer
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               title:
+ *                 type: string
+ *               description:
+ *                 type: string
+ *               category:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Question updated successfully
+ *       404:
+ *         description: Question not found
+ *       500:
+ *         description: Server error due to database connection issue.
+ */
+//questionRouter.put("/:questionId", [validateDataQuestion], async (req, res) => { /*...*/ });
+
+/**
+ * @swagger
+ * /questions/{questionId}:
+ *   delete:
+ *     summary: Delete a question by ID
+ *     tags: [Questions]
+ *     parameters:
+ *       - in: path
+ *         name: questionId
+ *         required: true
+ *         schema:
+ *           type: integer
+ *     responses:
+ *       200:
+ *         description: Question deleted successfully
+ *       404:
+ *         description: Question not found
+ *       500:
+ *         description: Server error due to database connection issue.
+ */
+//questionRouter.delete("/:questionId", async (req, res) => { /*...*/ });
+
+/**
+ * @swagger
+ * /questions/{questionId}/answer:
+ *   post:
+ *     summary: Add an answer to a question by ID
+ *     tags: [Questions]
+ *     parameters:
+ *       - in: path
+ *         name: questionId
+ *         required: true
+ *         schema:
+ *           type: integer
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               content:
+ *                 type: string
+ *                 maxLength: 300
+ *     responses:
+ *       201:
+ *         description: Answer created successfully
+ *       404:
+ *         description: Question not found
+ *       500:
+ *         description: Server error due to database connection issue.
+ */
+//questionRouter.post("/:questionId/answer", async (req, res) => { /*...*/ });
+
+/**
+ * @swagger
+ * /questions/{questionId}/answer:
+ *   get:
+ *     summary: Get answers for a question by question ID
+ *     tags: [Questions]
+ *     parameters:
+ *       - in: path
+ *         name: questionId
+ *         required: true
+ *         schema:
+ *           type: integer
+ *     responses:
+ *       200:
+ *         description: A list of answers for the specified question
+ *       404:
+ *         description: Question not found
+ *       500:
+ *         description: Server error due to database connection issue.
+ */
+//questionRouter.get("/:questionId/answer", async (req, res) => { /*...*/ });
+
+/**
+ * @swagger
+ * /questions/{questionId}/answer:
+ *   delete:
+ *     summary: Delete answers for a question by question ID
+ *     tags: [Questions]
+ *     parameters:
+ *       - in: path
+ *         name: questionId
+ *         required: true
+ *         schema:
+ *           type: integer
+ *     responses:
+ *       200:
+ *         description: Answers deleted successfully
+ *       404:
+ *         description: Question not found
+ *       500:
+ *         description: Server error due to database connection issue.
+ */
+//questionRouter.delete("/:questionId/answer", async (req, res) => { /*...*/ });
+
+/**
+ * @swagger
+ * /questions/{questionId}/vote:
+ *   post:
+ *     summary: Vote on a question
+ *     tags: [Questions]
+ *     parameters:
+ *       - in: path
+ *         name: questionId
+ *         required: true
+ *         schema:
+ *           type: integer
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               vote:
+ *                 type: integer
+ *                 enum: [1, -1]
+ *                 description: "1 for upvote, -1 for downvote"
+ *     responses:
+ *       201:
+ *         description: Vote on the question recorded successfully
+ *       404:
+ *         description: Question not found
+ *       500:
+ *         description: Server error due to database connection issue.
+ */
+//questionRouter.post("/:questionId/vote", async (req, res) => { /*...*/ });
+
+
+
 
 export default questionRouter;
